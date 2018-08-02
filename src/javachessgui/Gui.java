@@ -8,31 +8,31 @@ import javafx.scene.layout.HBox;
 public class Gui {
 
     public HBox horizontal_box = new HBox(2);
-    private Board b;
-    private Game g;
-    private Stage s;
+    private Board board;
+    private Game game;
+    private Stage stage;
 
-    public Gui(Stage set_s) {
+    public Gui(Stage set_stage) {
 
-        s = set_s;
+        stage = set_stage;
 
-        b = new Board(true);
-        b.s = s;
+        board = new Board(true);
+        board.stage = stage;
 
-        g = new Game(s, b);
+        game = new Game(stage, board);
 
-        g.reset(b.report_fen());
+        game.reset(board.report_fen());
 
-        b.g = g;
+        board.game = game;
 
 
-        horizontal_box.getChildren().add(b.main_box);
-        horizontal_box.getChildren().add(g.vertical_box);
+        horizontal_box.getChildren().add(board.main_box);
+        horizontal_box.getChildren().add(game.vertical_box);
 
     }
 
     public void shutdown() {
-        b.stop_engine_process();
+        board.stop_engine_process();
     }
 
 }

@@ -1,6 +1,8 @@
 package javachessgui;
 
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -10,10 +12,7 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Button;
-import javafx.scene.control.ListView;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -81,8 +80,8 @@ public class Board {
     private static int info_bar_size;
     private static int font_size;
     public Boolean deep_going = false;
-    public Stage s = new Stage();
-    public Game g = null;
+    public Stage stage = new Stage();
+    public Game game = null;
     ////////////////////////////////////////////////////////
     public int fullmove_number;
     public int turn;
@@ -186,7 +185,15 @@ public class Board {
     private int current_move_gen_piece_color = 0;
     private Move current_move = new Move();
     private String uci_puff = "";
+    ////////////////////////////////////////////////////////
+    // Game modes
+    private String mode_chess = "Chess";
+    private String mode_chess_960 = "Chess960";
+    private static String chess_rep = "rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR";
+    private static String current_rep = null;
+
     private EventHandler<MouseEvent> mouseHandler = new EventHandler<MouseEvent>() {
+
 
         @Override
         public void handle(MouseEvent mouseEvent) {
@@ -394,7 +401,7 @@ public class Board {
             reset_button.setOnAction(new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent e) {
-                    reset();
+                    reset(current_rep);
                 }
             });
 
@@ -403,7 +410,7 @@ public class Board {
             delete_button.setOnAction(new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent e) {
-                    set_from_fen_inner(g.delete_move(), false);
+                    set_from_fen_inner(game.delete_move(), false);
                     make_move_show(null);
                 }
             });
@@ -439,7 +446,7 @@ public class Board {
             to_begin_button.setOnAction(new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent e) {
-                    g.to_begin();
+                    game.to_begin();
                 }
             });
 
@@ -448,7 +455,7 @@ public class Board {
             back_button.setOnAction(new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent e) {
-                    g.back();
+                    game.back();
                 }
             });
 
@@ -457,7 +464,7 @@ public class Board {
             forward_button.setOnAction(new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent e) {
-                    g.forward();
+                    game.forward();
                 }
             });
 
@@ -466,7 +473,7 @@ public class Board {
             to_end_button.setOnAction(new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent e) {
-                    g.to_end();
+                    game.to_end();
                 }
             });
 
@@ -479,11 +486,26 @@ public class Board {
                 }
             });
 
+            ObservableList<String> game_modes = FXCollections.observableArrayList(mode_chess, mode_chess_960);
+            ComboBox game_modes_box = new ComboBox(game_modes);
+            game_modes_box.getSelectionModel().select(mode_chess);
+
+            game_modes_box.valueProperty().addListener(new ChangeListener() {
+                @Override
+                public void changed(ObservableValue observableValue, Object o, Object t1) {
+                    System.out.println(game_modes_box.getSelectionModel().getSelectedItem().toString());
+                    if (game_modes_box.getSelectionModel().getSelectedItem().toString().equals(mode_chess)) {
+                        reset(current_rep);
+                    }
+                }
+            });
+
             game_controls_box.getChildren().add(to_begin_button);
             game_controls_box.getChildren().add(back_button);
             game_controls_box.getChildren().add(forward_button);
             game_controls_box.getChildren().add(to_end_button);
             game_controls_box.getChildren().add(select_engine_button);
+            game_controls_box.getChildren().add(game_modes_box);
 
             vertical_box.getChildren().add(game_controls_box);
 
@@ -539,7 +561,7 @@ public class Board {
 
         }
 
-        reset();
+        reset(current_rep);
 
     }
 
@@ -609,6 +631,8 @@ public class Board {
 
         chess_font = Font.loadFont(stream, piece_size);
 
+        current_rep = chess_rep;
+
         // light square conversion
 
         translit_light = new Hashtable();
@@ -649,140 +673,74 @@ public class Board {
 
         int move_table_curr_ptr = 0;
 
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 8; j++) {
-                for (int p = 0; p < 64; p++) {
-                    int piece_type = p & PIECE_TYPE;
-                    int piece_color = p & PIECE_COLOR;
+        for (int rank = 0; rank < 8; rank++) {
+            for (int file = 0; file < 8; file++) {
+                for (int piece = 0; piece < 64; piece++) {
+                    int piece_type = piece & PIECE_TYPE;
+                    int piece_color = piece & PIECE_COLOR;
 
-                    //System.out.println("i "+i+" j "+j+" p "+p+" curr "+move_table_curr_ptr);
+                    //System.out.println("rank "+rank+" file "+file+" piece "+piece+" curr "+move_table_curr_ptr);
 
-                    if ((piece_type == QUEEN) || (piece_type == ROOK) || (piece_type == BISHOP) || (piece_type == KNIGHT) || (piece_type == KING) || (piece_type == PAWN)) {
+                    if ((piece_type == QUEEN)
+                            || (piece_type == ROOK)
+                            || (piece_type == BISHOP)
+                            || (piece_type == KNIGHT)
+                            || (piece_type == KING)
+                            || (piece_type == PAWN)) {
 
                         Boolean is_single = ((piece_type & SINGLE) != 0);
 
-                        move_table_ptr[i][j][p] = move_table_curr_ptr;
+                        move_table_ptr[rank][file][piece] = move_table_curr_ptr;
 
                         for (int vi = -2; vi <= 2; vi++) {
                             for (int vj = -2; vj <= 2; vj++) {
 
-                                Boolean is_castling = (
-                                        (
-                                                // castling white
-                                                (p == (WHITE | KING))
-                                                        &&
-                                                        (
-                                                                ((i == 4) && (j == 7) && (vi == 2) && (vj == 0))
-                                                                        ||
-                                                                        ((i == 4) && (j == 7) && (vi == -2) && (vj == 0))
-                                                        )
-                                        )
-
-                                                ||
-
-                                                (
-                                                        // castling black
-                                                        (p == (BLACK | KING))
-                                                                &&
-                                                                (
-                                                                        ((i == 4) && (j == 0) && (vi == 2) && (vj == 0))
-                                                                                ||
-                                                                                ((i == 4) && (j == 0) && (vi == -2) && (vj == 0))
-                                                                )
-                                                )
-                                );
+                                Boolean is_castling = ((
+                                        // castling white
+                                        (piece == (WHITE | KING))
+                                                && (((rank == 4)
+                                                && (file == 7)
+                                                && (vi == 2)
+                                                && (vj == 0)) || ((rank == 4)
+                                                && (file == 7)
+                                                && (vi == -2)
+                                                && (vj == 0)))) || (
+                                        // castling black
+                                        (piece == (BLACK | KING))
+                                                && (((rank == 4)
+                                                && (file == 0)
+                                                && (vi == 2)
+                                                && (vj == 0)) || ((rank == 4)
+                                                && (file == 0)
+                                                && (vi == -2)
+                                                && (vj == 0)))));
 
                                 if (
 
                                     // cannot be both zero
                                         ((Math.abs(vi) + Math.abs(vj)) > 0)
-
-                                                &&
-
-                                                (
-
-                                                        (is_castling)
-
-                                                                ||
-
-                                                                (
-                                                                        ((vi * vj) != 0)
-                                                                                &&
-                                                                                ((Math.abs(vi) != 2) && (Math.abs(vj) != 2))
-                                                                                &&
-                                                                                ((piece_type & DIAGONAL) != 0)
-                                                                )
-
-                                                                ||
-
-                                                                (
-                                                                        ((vi * vj) == 0)
-                                                                                &&
-                                                                                ((Math.abs(vi) != 2) && (Math.abs(vj) != 2))
-                                                                                &&
-                                                                                ((piece_type & STRAIGHT) != 0)
-                                                                )
-
-                                                                ||
-
-                                                                (
-                                                                        (Math.abs(vi * vj) == 2)
-                                                                                &&
-                                                                                (piece_type == KNIGHT)
-                                                                )
-
-                                                                ||
-
-                                                                (
-                                                                        (piece_type == PAWN)
-                                                                                &&
-                                                                                (Math.abs(vi) < 2)
-                                                                                &&
-                                                                                (Math.abs(vj) > 0)
-                                                                                &&
-                                                                                (
-                                                                                        (
-                                                                                                (piece_color == WHITE)
-                                                                                                        &&
-                                                                                                        (vj < 0)
-                                                                                                        &&
-                                                                                                        (
-                                                                                                                (Math.abs(vj) == 1)
-                                                                                                                        ||
-                                                                                                                        (
-                                                                                                                                (j == 6)
-                                                                                                                                        &&
-                                                                                                                                        (vi == 0)
-                                                                                                                        )
-                                                                                                        )
-                                                                                        )
-                                                                                                ||
-                                                                                                (
-                                                                                                        (piece_color == BLACK)
-                                                                                                                &&
-                                                                                                                (vj > 0)
-                                                                                                                &&
-                                                                                                                (
-                                                                                                                        (Math.abs(vj) == 1)
-                                                                                                                                ||
-                                                                                                                                (
-                                                                                                                                        (j == 1)
-                                                                                                                                                &&
-                                                                                                                                                (vi == 0)
-                                                                                                                                )
-                                                                                                                )
-                                                                                                )
-                                                                                )
-                                                                )
-
-                                                )
-
-                                ) {
+                                                && ((is_castling) || (((vi * vj) != 0)
+                                                && ((Math.abs(vi) != 2)
+                                                && (Math.abs(vj) != 2))
+                                                && ((piece_type & DIAGONAL) != 0)) || (((vi * vj) == 0)
+                                                && ((Math.abs(vi) != 2)
+                                                && (Math.abs(vj) != 2))
+                                                && ((piece_type & STRAIGHT) != 0)) || ((Math.abs(vi * vj) == 2)
+                                                && (piece_type == KNIGHT)) || ((piece_type == PAWN)
+                                                && (Math.abs(vi) < 2)
+                                                && (Math.abs(vj) > 0)
+                                                && (((piece_color == WHITE)
+                                                && (vj < 0)
+                                                && ((Math.abs(vj) == 1) || ((file == 6)
+                                                && (vi == 0)))) || ((piece_color == BLACK)
+                                                && (vj > 0)
+                                                && ((Math.abs(vj) == 1) || ((file == 1)
+                                                && (vi == 0)))))))) {
 
                                     int start_vector = move_table_curr_ptr;
 
-                                    int ci = i;
-                                    int cj = j;
+                                    int ci = rank;
+                                    int cj = file;
 
                                     Boolean square_ok;
 
@@ -794,11 +752,9 @@ public class Board {
                                         square_ok = square_ok(ci, cj);
 
                                         if (square_ok) {
-                                            if (
-                                                    ((p == (WHITE | PAWN)) && (cj == 0))
-                                                            ||
-                                                            ((p == (BLACK | PAWN)) && (cj == 7))
-                                            ) {
+                                            if (((piece == (WHITE | PAWN))
+                                                    && (cj == 0)) || ((piece == (BLACK | PAWN))
+                                                    && (cj == 7))) {
                                                 for (int prom = 0; prom < promotion_pieces.length; prom++) {
                                                     MoveDescriptor md = new MoveDescriptor();
                                                     md.to_i = ci;
@@ -1087,8 +1043,8 @@ public class Board {
     }
 
     private void reset_game() {
-        if (g != null) {
-            g.reset(report_fen());
+        if (game != null) {
+            game.reset(report_fen());
         }
     }
 
@@ -1544,7 +1500,7 @@ public class Board {
     public void flip() {
         flip = !flip;
         drawBoard();
-        g.update_game();
+        game.update_game();
     }
 
     private void make_move(Move m) {
@@ -2108,7 +2064,7 @@ public class Board {
 
             make_move(m);
 
-            g.add_move(san, report_fen());
+            game.add_move(san, report_fen());
 
         }
 
@@ -2122,7 +2078,7 @@ public class Board {
 
     }
 
-    public void reset() {
+    public void reset(String rep) {
 
         if (with_gui) {
 
@@ -2220,7 +2176,7 @@ public class Board {
 
                 String bestmove_san = to_san(bestmove);
 
-                //g.record_eval(report_fen(),bestmove_san,score_numerical);
+                //game.record_eval(report_fen(),bestmove_san,score_numerical);
 
             }
 
@@ -2484,7 +2440,7 @@ public class Board {
         if (set_path == null) {
             uci_engine_path = "";
 
-            File file = f.showOpenDialog(s);
+            File file = f.showOpenDialog(stage);
 
             if (file != null) {
                 uci_engine_path = file.getPath();

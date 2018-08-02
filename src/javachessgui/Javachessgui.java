@@ -84,16 +84,16 @@ public class Javachessgui extends Application {
 
         root.getChildren().add(gui.horizontal_box);
 
-        message_text.setWrapText(true);
-        message_text.setTranslateX(30);
-        message_text.setTranslateY(30);
-        message_text.setStyle("-fx-opacity: 0;" + message_text_style);
-        root.getChildren().add(message_text);
+//        message_text.setWrapText(true);
+//        message_text.setTranslateX(30);
+//        message_text.setTranslateY(30);
+//        message_text.setStyle("-fx-opacity: 0;" + message_text_style);
+//        root.getChildren().add(message_text);
 
         primaryStage.setScene(new Scene(root));
         primaryStage.show();
 
-        system_message("Welcome!", 2000);
+//        system_message("Welcome!", 2000);
 
         System.out.println("application started");
     }

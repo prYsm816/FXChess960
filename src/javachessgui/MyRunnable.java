@@ -49,7 +49,7 @@ public class MyRunnable implements Runnable {
 
         if (kind.equals("do_deep")) {
 
-            b.g.do_deep();
+            b.game.do_deep();
 
             return;
 
@@ -57,7 +57,7 @@ public class MyRunnable implements Runnable {
 
         if (kind.equals("update_deep")) {
 
-            b.g.update_deep();
+            b.game.update_deep();
 
             return;
 
