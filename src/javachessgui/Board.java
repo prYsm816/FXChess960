@@ -27,8 +27,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -79,6 +81,8 @@ public class Board {
     private static int board_size;
     private static int info_bar_size;
     private static int font_size;
+    private static String chess_rep = "rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR";
+    private static String current_rep = null;
     public Boolean deep_going = false;
     public Stage stage = new Stage();
     public Game game = null;
@@ -189,9 +193,6 @@ public class Board {
     // Game modes
     private String mode_chess = "Chess";
     private String mode_chess_960 = "Chess960";
-    private static String chess_rep = "rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR";
-    private static String current_rep = null;
-
     private EventHandler<MouseEvent> mouseHandler = new EventHandler<MouseEvent>() {
 
 
@@ -493,8 +494,12 @@ public class Board {
             game_modes_box.valueProperty().addListener(new ChangeListener() {
                 @Override
                 public void changed(ObservableValue observableValue, Object o, Object t1) {
-                    System.out.println(game_modes_box.getSelectionModel().getSelectedItem().toString());
-                    if (game_modes_box.getSelectionModel().getSelectedItem().toString().equals(mode_chess)) {
+                    String mode = game_modes_box.getSelectionModel().getSelectedItem().toString();
+                    if (mode.equals(mode_chess)) {
+                        current_rep = chess_rep;
+                        reset(current_rep);
+                    } else if (mode.equals(mode_chess_960)) {
+                        current_rep = gen_960_fen();
                         reset(current_rep);
                     }
                 }
@@ -563,6 +568,83 @@ public class Board {
 
         reset(current_rep);
 
+    }
+
+    private static String gen_960_fen() {
+        String positions[] = new String[8];
+        ArrayList<String> availablePositions = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            availablePositions.add(i + "");
+        }
+        int king;
+        int rookOne;
+        int rookTwo;
+        int bishopOne;
+        int bishopTwo;
+        int knightOne;
+        int knightTwo;
+        int queen;
+
+        // Generate king
+        king = get_random_number_in_range(2, 5);
+        availablePositions.remove(Integer.toString(king));
+        positions[king] = "k";
+
+        // Generate rooks
+        rookOne = get_random_number_in_range(0, king - 1);
+        rookTwo = get_random_number_in_range(king + 1, 7);
+        availablePositions.remove(Integer.toString(rookOne));
+        availablePositions.remove(Integer.toString(rookTwo));
+        positions[rookOne] = "r";
+        positions[rookTwo] = "r";
+
+        // Generate bishops
+        bishopOne = Integer.parseInt(availablePositions.get(get_random_number_in_range(0, availablePositions.size() - 1)));
+        availablePositions.remove(Integer.toString(bishopOne));
+        bishopTwo = Integer.parseInt(availablePositions.get(get_random_number_in_range(0, availablePositions.size() - 1)));
+        if (bishopOne % 2 == 0) {
+            while (bishopTwo % 2 == 0) {
+                bishopTwo = Integer.parseInt(availablePositions.get(get_random_number_in_range(0, availablePositions.size() - 1)));
+            }
+        } else if (bishopOne % 2 != 0) {
+            while (bishopTwo % 2 != 0) {
+                bishopTwo = Integer.parseInt(availablePositions.get(get_random_number_in_range(0, availablePositions.size() - 1)));
+            }
+
+        }
+        availablePositions.remove(Integer.toString(bishopTwo));
+        positions[bishopOne] = "b";
+        positions[bishopTwo] = "b";
+
+        // Gen knights
+        knightOne = Integer.parseInt(availablePositions.get(get_random_number_in_range(0, availablePositions.size() - 1)));
+        availablePositions.remove(Integer.toString(knightOne));
+        knightTwo = Integer.parseInt(availablePositions.get(get_random_number_in_range(0, availablePositions.size() - 1)));
+        availablePositions.remove(Integer.toString(knightTwo));
+        positions[knightOne] = "n";
+        positions[knightTwo] = "n";
+
+        // Gen queen
+        queen = Integer.parseInt(availablePositions.get(0));
+        availablePositions.remove(Integer.toString(queen));
+        positions[queen] = "q";
+
+        String pawns = "pppppppp";
+
+        String black_positions = Arrays.toString(positions)
+                .replaceAll(" ", "")
+                .replaceAll("\\[", "")
+                .replaceAll("]", "")
+                .replaceAll(",", "");
+        String white_positions = black_positions.toUpperCase();
+        black_positions = black_positions + pawns;
+        white_positions = pawns.toUpperCase() + white_positions;
+        String spaces = "";
+        for (int i = 0; i < 32; i++) {
+            spaces += " ";
+        }
+
+        return black_positions + spaces + white_positions;
     }
 
     private static int code_of(int piece) {
@@ -821,6 +903,15 @@ public class Board {
             return BLACK;
         }
         return WHITE;
+    }
+
+    private static int get_random_number_in_range(int min, int max) {
+        if (min >= max) {
+            throw new IllegalArgumentException("max must be greater than min: MIN[" + min + "], MAX[" + max + "]");
+        }
+
+        Random r = new Random();
+        return r.nextInt((max - min) + 1) + min;
     }
 
     public Boolean is_engine_installed() {
@@ -2089,7 +2180,7 @@ public class Board {
         ///////////////////////////////////////////////////////
         // board state
 
-        rep = "rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR";
+//        rep = "rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR";
 
         rep_to_board(rep);
 
